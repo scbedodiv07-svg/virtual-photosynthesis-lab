@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photosynthesis Explorer | Virtual Science Lab</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #27ae60;
+            --accent: #3498db;
+            --danger: #e74c3c;
+            --bg-lab: #f8fafc;
+            --text: #1e293b;
+            --border: #cbd5e1;
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: #e2e8f0;
+            color: var(--text);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Responsive Container */
+        #app-container {
+            width: 95vw;
+            max-width: 75rem;
+            aspect-ratio: 16 / 10;
+            background: white;
+            box-shadow: 0 1rem 3rem rgba(0,0,0,0.1);
+            border-radius: 1rem;
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+            overflow: hidden;
+            border: 0.1rem solid var(--border);
+        }
+
+        header {
+            background: var(--primary);
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        main {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr;
+            gap: 1.5rem;
+            padding: 1.5rem;
+            overflow-y: auto;
+        }
+
+        /* Lab Area */
+        .lab-viewport {
+            background: var(--bg-lab);
+            border-radius: 0.75rem;
+            border: 0.15rem solid var(--border);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .controls {
+            padding: 1.5rem;
+            background: white;
+            border-radius: 0.75rem;
+            border: 1px solid var(--border);
+        }
+
+        .control-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            cursor: pointer;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 1rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: white;
+        }
+
+        .btn-start { background: var(--secondary); }
+        .btn-start:hover { background: #219150; }
+        .btn-stop { background: var(--danger); }
+        .btn-reset { background: var(--primary); margin-top: 1rem; padding: 0.5rem; font-size: 0.8rem; }
+
+        /* Animation */
+        .bubble {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.9);
+            border-radius: 50%;
+            pointer-events: none;
+            animation: rise linear forwards;
+        }
+
+        @keyframes rise {
+            0% { transform: translateY(0) scale(0.5); opacity: 0.8; }
+            100% { transform: translateY(-15rem) scale(1.2); opacity: 0; }
+        }
+
+        /* Table & Graph Area */
+        .data-display {
+            display: grid;
+            grid-template-rows: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .table-container {
+            overflow-y: auto;
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+        th { background: #f1f5f9; position: sticky; top: 0; }
+        th, td { padding: 0.6rem; border-bottom: 1px solid var(--border); text-align: center; }
+
+        .graph-container {
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            background: white;
+            padding: 0.5rem;
+            position: relative;
+        }
+
+        /* Quiz Section */
+        .assessment {
+            background: #f8fafc;
+            padding: 1.5rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .conclusion-sentence {
+            line-height: 2;
+            margin-bottom: 1.5rem;
+        }
+
+        select, input[type="text"] {
+            padding: 0.3rem 0.5rem;
+            border-radius: 0.25rem;
+            border: 1px solid var(--border);
+            background: white;
+            font-size: 0.9rem;
+        }
+
+        .feedback {
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+            font-weight: bold;
+        }
+
+        .feedback-success { color: var(--secondary); }
+        .feedback-error { color: var(--danger); }
+
+        .timer-display {
+            position: absolute;
+            top: 1rem;
+            right: 1.5rem;
+            font-family: monospace;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary);
+            background: rgba(255,255,255,0.8);
+            padding: 0.2rem 0.8rem;
+            border-radius: 0.5rem;
+        }
+
+        /* SVG Components */
+        .lab-svg {
+            width: 80%;
+            height: 70%;
+        }
+
+        .lamp-beam {
+            fill: url(#lampGradient);
+            opacity: 0.3;
+            transition: opacity 0.3s;
+        }
+
+        #lamp-group {
+            transition: transform 0.2s ease-out;
+        }
+    </style>
+</head>
+<body>
+
+<div id="app-container">
+    <header>
+        <h1>Photosynthesis Explorer</h1>
+        <div id="status-badge" style="font-size: 0.8rem; opacity: 0.8;">SLS Optimized | Data Persistent</div>
+    </header>
+
+    <main>
+        <section class="lab-viewport" id="lab-scene">
+            <div class="timer-display" id="timer">30.0s</div>
+            
+            <svg class="lab-svg" viewBox="0 0 400 300">
+                <defs>
+                    <linearGradient id="lampGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" style="stop-color:yellow;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:yellow;stop-opacity:0" />
+                    </linearGradient>
+                </defs>
+
+                <!-- Beaker and Water -->
+                <rect x="250" y="150" width="80" height="100" fill="#e2e8f0" rx="5" />
+                <path d="M 250 160 L 330 160 L 330 250 L 250 250 Z" fill="#93c5fd" opacity="0.6" />
+                
+                <!-- Hydrilla -->
+                <path d="M 290 250 Q 280 200 295 170" fill="none" stroke="#166534" stroke-width="4" stroke-linecap="round" />
+                <path d="M 290 230 L 275 220 M 290 210 L 305 205 M 290 190 L 280 180" fill="none" stroke="#16a34a" stroke-width="3" />
+                
+                <!-- Lamp -->
+                <g id="lamp-group" transform="translate(0,0)">
+                    <rect x="20" y="160" width="40" height="60" fill="#334155" rx="5" />
+                    <circle cx="60" cy="190" r="15" fill="#fde047" />
+                    <path id="light-beam" class="lamp-beam" d="M 60 190 L 250 140 L 250 240 Z" />
+                    <text x="25" y="150" font-size="10" fill="#475569">LAMP</text>
+                </g>
+
+                <!-- Distance Marker -->
+                <line x1="60" y1="270" x2="250" y2="270" stroke="#94a3b8" stroke-dasharray="4" />
+                <text id="dist-text" x="130" y="285" font-size="12" text-anchor="middle" fill="#475569">Distance: 50cm</text>
+            </svg>
+
+            <div class="controls" style="width: 100%; border: none; border-top: 1px solid var(--border);">
+                <div class="control-group">
+                    <label>Lamp Distance: <span id="dist-val">50</span> cm</label>
+                    <input type="range" id="distance-slider" min="10" max="100" step="10" value="50">
+                </div>
+                <button class="btn btn-start" id="action-btn">Start Experiment (30s)</button>
+            </div>
+        </section>
+
+        <section class="data-display">
+            <div class="table-container">
+                <table id="data-table">
+                    <thead>
+                        <tr>
+                            <th>Trial</th>
+                            <th>Distance (cm)</th>
+                            <th>Bubbles</th>
+                            <th>Rate (b/s)</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div class="graph-container">
+                <label style="text-align: center; font-size: 0.75rem;">Rate (Bubbles/s) vs Distance (cm)</label>
+                <svg id="graph-svg" width="100%" height="90%" viewBox="0 0 300 200" style="overflow: visible;"></svg>
+            </div>
+        </section>
+    </main>
+
+    <section class="assessment">
+        <div class="conclusion-sentence">
+            <strong>Conclusion:</strong> Based on my observations, as the distance of the lamp decreases, the light intensity 
+            <select id="q-intensity">
+                <option value="">-- select --</option>
+                <option value="decreases">decreases</option>
+                <option value="increases">increases</option>
+            </select>. 
+            This causes the rate of photosynthesis to 
+            <select id="q-rate">
+                <option value="">-- select --</option>
+                <option value="decrease">decrease</option>
+                <option value="increase">increase</option>
+            </select>, 
+            resulting in 
+            <select id="q-bubbles">
+                <option value="">-- select --</option>
+                <option value="fewer">fewer</option>
+                <option value="more">more</option>
+            </select> bubbles produced per minute.
+        </div>
+        
+        <div class="bonus-question">
+            <label><strong>Bonus Question:</strong> What gas is contained within the bubbles produced?</label>
+            <input type="text" id="bonus-input" placeholder="Enter gas name...">
+            <button class="btn" id="bonus-submit" style="width: auto; padding: 0.3rem 1rem; background: var(--accent);">Check</button>
+            <div id="bonus-feedback" class="feedback"></div>
+        </div>
+
+        <button class="btn btn-reset" id="reset-btn">Reset All Laboratory Data</button>
+    </section>
+</div>
+
+<script>
+    // --- APP STATE & PERSISTENCE ---
+    const APP_ID = 'sls_photosynthesis_state';
+    let state = {
+        trials: [],
+        conclusion: { intensity: '', rate: '', bubbles: '' },
+        bonus: '',
+        activeDistance: 50
+    };
+
+    const loadState = () => {
+        const saved = localStorage.getItem(APP_ID);
+        if (saved) {
+            state = JSON.parse(saved);
+            updateTable();
+            drawGraph();
+            document.getElementById('q-intensity').value = state.conclusion.intensity;
+            document.getElementById('q-rate').value = state.conclusion.rate;
+            document.getElementById('q-bubbles').value = state.conclusion.bubbles;
+            document.getElementById('bonus-input').value = state.bonus;
+        }
+    };
+
+    const saveState = () => {
+        localStorage.setItem(APP_ID, JSON.stringify(state));
+    };
+
+    // --- DOM ELEMENTS ---
+    const slider = document.getElementById('distance-slider');
+    const distVal = document.getElementById('dist-val');
+    const distText = document.getElementById('dist-text');
+    const lampGroup = document.getElementById('lamp-group');
+    const actionBtn = document.getElementById('action-btn');
+    const timerDisplay = document.getElementById('timer');
+    const labScene = document.getElementById('lab-scene');
+    const beam = document.getElementById('light-beam');
+
+    // --- SIMULATION LOGIC ---
+    let isRunning = false;
+    let timer = 30.0;
+    let bubbleCount = 0;
+    let simulationInterval;
+
+    const updateLampPosition = (val) => {
+        // Map 10-100cm to X-offset in SVG
+        const xOffset = (val - 50) * 1.8; 
+        lampGroup.setAttribute('transform', `translate(${xOffset}, 0)`);
+        distVal.innerText = val;
+        distText.innerText = `Distance: ${val}cm`;
+        
+        // Adjust beam width based on distance
+        const beamX = 250 - xOffset;
+        beam.setAttribute('d', `M 60 190 L ${beamX} 140 L ${beamX} 240 Z`);
+        
+        state.activeDistance = parseInt(val);
+        saveState();
+    };
+
+    slider.addEventListener('input', (e) => updateLampPosition(e.target.value));
+
+    const startExperiment = () => {
+        if (isRunning) return;
+        
+        isRunning = true;
+        bubbleCount = 0;
+        timer = 30.0;
+        slider.disabled = true;
+        actionBtn.innerText = "Simulating...";
+        actionBtn.classList.replace('btn-start', 'btn-stop');
+        beam.style.opacity = "0.8";
+
+        const dist = parseInt(slider.value);
+        // Inverse Square Law Logic
+        // 10cm -> 70 bubbles, 100cm -> 2 bubbles
+        const baseCount = Math.floor(7000 / (dist * dist)) + 1;
+        const variance = Math.floor(Math.random() * 5) - 2; // -2 to +2
+        const targetTotal = Math.max(1, baseCount + variance);
+        
+        // How often to spawn a bubble? (30s / targetTotal)
+        const spawnInterval = (30 * 1000) / targetTotal;
+        let lastSpawn = Date.now();
+
+        simulationInterval = setInterval(() => {
+            timer -= 0.1;
+            timerDisplay.innerText = timer.toFixed(1) + 's';
+
+            if (Date.now() - lastSpawn > spawnInterval) {
+                createBubble();
+                bubbleCount++;
+                lastSpawn = Date.now();
+            }
+
+            if (timer <= 0) {
+                stopExperiment(targetTotal);
+            }
+        }, 100);
+    };
+
+    const stopExperiment = (finalCount) => {
+        clearInterval(simulationInterval);
+        isRunning = false;
+        timer = 30.0;
+        timerDisplay.innerText = '30.0s';
+        slider.disabled = false;
+        actionBtn.innerText = "Start Experiment (30s)";
+        actionBtn.classList.replace('btn-stop', 'btn-start');
+        beam.style.opacity = "0.3";
+
+        // Record Trial
+        const trial = {
+            id: state.trials.length + 1,
+            distance: parseInt(slider.value),
+            count: bubbleCount,
+            rate: (bubbleCount / 30).toFixed(2)
+        };
+        state.trials.push(trial);
+        saveState();
+        updateTable();
+        drawGraph();
+    };
+
+    const createBubble = () => {
+        const b = document.createElement('div');
+        b.className = 'bubble';
+        const size = Math.random() * 8 + 4;
+        b.style.width = size + 'px';
+        b.style.height = size + 'px';
+        
+        // Position relative to hydrilla tip in Lab Viewport
+        // Coordinates found by inspecting the SVG scene center
+        const rect = labScene.getBoundingClientRect();
+        const startX = rect.width * 0.72 + (Math.random() * 10 - 5);
+        const startY = rect.height * 0.6;
+        
+        b.style.left = startX + 'px';
+        b.style.top = startY + 'px';
+        b.style.animationDuration = (Math.random() * 1 + 1.5) + 's';
+        
+        labScene.appendChild(b);
+        setTimeout(() => b.remove(), 2500);
+    };
+
+    // --- TABLE & GRAPHING ---
+    const updateTable = () => {
+        const tbody = document.querySelector('#data-table tbody');
+        tbody.innerHTML = '';
+        state.trials.forEach(t => {
+            const row = `<tr>
+                <td>${t.id}</td>
+                <td>${t.distance}</td>
+                <td>${t.count}</td>
+                <td>${t.rate}</td>
+            </tr>`;
+            tbody.innerHTML += row;
+        });
+    };
+
+    const drawGraph = () => {
+        const svg = document.getElementById('graph-svg');
+        svg.innerHTML = ''; // Clear
+
+        const width = 300;
+        const height = 200;
+        const padding = 30;
+
+        // Draw Axes
+        const axes = `
+            <line x1="${padding}" y1="${height-padding}" x2="${width}" y2="${height-padding}" stroke="black" />
+            <line x1="${padding}" y1="0}" x2="${padding}" y2="${height-padding}" stroke="black" />
+            <text x="${width/2}" y="${height}" font-size="10" text-anchor="middle">Distance (cm)</text>
+            <text x="5" y="${height/2}" font-size="10" transform="rotate(-90 5 ${height/2})" text-anchor="middle">Rate (b/s)</text>
+        `;
+        svg.innerHTML += axes;
+
+        if (state.trials.length === 0) return;
+
+        // Scaling (X: 0-100, Y: 0-2.5)
+        const getX = (d) => padding + (d / 100) * (width - padding - 10);
+        const getY = (r) => (height - padding) - (r / 2.5) * (height - padding - 10);
+
+        // Plot Points
+        state.trials.forEach(t => {
+            const circle = `<circle cx="${getX(t.distance)}" cy="${getY(t.rate)}" r="3" fill="var(--accent)" />`;
+            svg.innerHTML += circle;
+        });
+
+        // Line of Best Fit (Linear Regression)
+        if (state.trials.length >= 3) {
+            const n = state.trials.length;
+            let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+            state.trials.forEach(t => {
+                sumX += t.distance;
+                sumY += parseFloat(t.rate);
+                sumXY += (t.distance * t.rate);
+                sumX2 += (t.distance * t.distance);
+            });
+
+            const m = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+            const b = (sumY - m * sumX) / n;
+
+            // Coordinates for line
+            const x1 = 10, y1 = m * 10 + b;
+            const x2 = 100, y2 = m * 100 + b;
+
+            const regressionLine = `<line x1="${getX(x1)}" y1="${getY(y1)}" x2="${getX(x2)}" y2="${getY(y2)}" 
+                stroke="var(--danger)" stroke-width="1" stroke-dasharray="3" />`;
+            svg.innerHTML += regressionLine;
+        }
+    };
+
+    // --- ASSESSMENT LOGIC ---
+    document.querySelectorAll('select').forEach(sel => {
+        sel.addEventListener('change', (e) => {
+            const key = e.target.id.replace('q-', '');
+            state.conclusion[key] = e.target.value;
+            saveState();
+        });
+    });
+
+    document.getElementById('bonus-submit').addEventListener('click', () => {
+        const input = document.getElementById('bonus-input').value.trim().toLowerCase();
+        const feedback = document.getElementById('bonus-feedback');
+        state.bonus = input;
+        saveState();
+
+        const correct = ['oxygen', 'o2', 'oxygen gas'];
+        const commonErrors = ['carbon dioxide', 'co2', 'air', 'nitrogen', 'hydrogen'];
+
+        if (correct.includes(input)) {
+            feedback.innerText = "Correct! Oxygen is produced during photosynthesis.";
+            feedback.className = "feedback feedback-success";
+        } else if (commonErrors.includes(input)) {
+            feedback.innerText = "Oops, that's incorrect. Try to recall the products of photosynthesis.";
+            feedback.className = "feedback feedback-error";
+        } else {
+            feedback.innerText = "Incorrect. Think about what gas plants release.";
+            feedback.className = "feedback feedback-error";
+        }
+    });
+
+    document.getElementById('reset-btn').addEventListener('click', () => {
+        if (confirm("This will permanently clear all your lab data and answers. Proceed?")) {
+            localStorage.removeItem(APP_ID);
+            location.reload();
+        }
+    });
+
+    actionBtn.addEventListener('click', startExperiment);
+
+    // Initialize
+    window.onload = () => {
+        loadState();
+        updateLampPosition(state.activeDistance);
+        slider.value = state.activeDistance;
+    };
+
+</script>
+</body>
+</html>
